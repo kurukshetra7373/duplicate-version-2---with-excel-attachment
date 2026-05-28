@@ -406,7 +406,15 @@ with right:
     if name != "-- Select --":
         candidate_rows = df_raw[df["Name"] == name].copy()
         if not candidate_rows.empty:
-            display_cols = [c for c in candidate_rows.columns if c.lower().strip() != "vendor name"]
+            col_lower_map = {c.lower().strip(): c for c in candidate_rows.columns}
+            exclude = {"vendor name"}
+            all_cols = [c for c in candidate_rows.columns if c.lower().strip() not in exclude]
+
+            # find the actual column name for open/closed (however it's cased in Excel)
+            oc_key = next((col_lower_map[k] for k in col_lower_map if "open" in k and "close" in k), None)
+            if oc_key and oc_key not in all_cols:
+                all_cols.insert(0, oc_key)
+            display_cols = all_cols
             badge_keys = {"open/closed", "dl", "ssn", "h1b", "opt"}
             rows_html = ""
             for _, row in candidate_rows[display_cols].iterrows():
