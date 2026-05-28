@@ -268,22 +268,22 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ── Load data ──
-df_raw = pd.read_excel("aa.xlsx")
+# ── Load data from Google Sheet ──
+SHEET_CSV = "https://docs.google.com/spreadsheets/d/1yJCQHkMAyBsuEt_yTzpuMUlwTlvwXA8iO-vMGDtKGjQ/export?format=csv"
+df_raw = pd.read_csv(SHEET_CSV)
 df = df_raw.copy()
-df["Name"]        = df["Name"].astype(str).str.lower().str.strip()
-df["Role"]        = df["Role"].astype(str).str.lower().str.strip()
-df["Vendor Name"] = df["Vendor Name"].astype(str).str.lower().str.strip()
-df["Client"]      = df["Client"].astype(str).str.lower().str.strip()
+df["Consultant Full Name"] = df["Consultant Full Name"].astype(str).str.lower().str.strip()
+df["Position/Role"]        = df["Position/Role"].astype(str).str.lower().str.strip()
+df["Vendor Name"]          = df["Vendor Name"].astype(str).str.lower().str.strip()
+df["Client"]               = df["Client"].astype(str).str.lower().str.strip()
 
 has_location = "Location" in df.columns
 if has_location:
     df["Location"] = df["Location"].astype(str).str.lower().str.strip()
-    df_raw["Location"] = df_raw["Location"].astype(str).str.strip()
     location_list = ["-- Select --"] + sorted(df["Location"].dropna().unique().tolist())
 
-name_list   = ["-- Select --"] + sorted(df["Name"].dropna().unique().tolist())
-role_list   = ["-- Select --"] + sorted(df["Role"].dropna().unique().tolist())
+name_list   = ["-- Select --"] + sorted(df["Consultant Full Name"].dropna().unique().tolist())
+role_list   = ["-- Select --"] + sorted(df["Position/Role"].dropna().unique().tolist())
 vendor_list = ["-- Select --"] + sorted(df["Vendor Name"].dropna().unique().tolist())
 client_list = ["-- Select --"] + sorted(df["Client"].dropna().unique().tolist())
 
@@ -348,8 +348,8 @@ with right:
     st.markdown('<div class="form-panel"><div class="form-title">Duplicate Destroyer</div></div>', unsafe_allow_html=True)
 
     client = st.selectbox("Select Client", client_list)
-    name   = st.selectbox("Select Name *", name_list)
-    role   = st.selectbox("Select Role", role_list)
+    name   = st.selectbox("Select Consultant Full Name *", name_list)
+    role   = st.selectbox("Select Position/Role", role_list)
     vendor = st.selectbox("Select Vendor Name", vendor_list)
 
     if has_location:
@@ -369,11 +369,11 @@ with right:
             st.session_state.check_result = "warning"
             st.session_state.check_msg = "⚠️  Please select 'Name' before checking."
         else:
-            query = (df["Name"] == name)
+            query = (df["Consultant Full Name"] == name)
             if client != "-- Select --":
                 query &= (df["Client"] == client)
             if role != "-- Select --":
-                query &= (df["Role"] == role)
+                query &= (df["Position/Role"] == role)
             if vendor != "-- Select --":
                 query &= (df["Vendor Name"] == vendor)
             if has_location and location != "-- Select --":
@@ -404,17 +404,12 @@ with right:
 
     # ── Candidate History ──
     if name != "-- Select --":
-        candidate_rows = df_raw[df["Name"] == name].copy()
+        candidate_rows = df_raw[df["Consultant Full Name"] == name].copy()
         if not candidate_rows.empty:
-            col_lower_map = {c.lower().strip(): c for c in candidate_rows.columns}
-            exclude = {"vendor name"}
-            all_cols = [c for c in candidate_rows.columns if c.lower().strip() not in exclude]
-
-            # find the actual column name for open/closed (however it's cased in Excel)
-            oc_key = next((col_lower_map[k] for k in col_lower_map if "open" in k and "close" in k), None)
-            if oc_key and oc_key not in all_cols:
-                all_cols.insert(0, oc_key)
-            display_cols = all_cols
+            display_cols = [c for c in [
+                "Date", "Submitted By", "Consultant Full Name", "Actual Owner",
+                "open/closed", "Position/Role", "Location", "DL", "SSN", "H1B", "OPT"
+            ] if c in candidate_rows.columns]
             badge_keys = {"open/closed", "dl", "ssn", "h1b", "opt"}
             rows_html = ""
             for _, row in candidate_rows[display_cols].iterrows():
