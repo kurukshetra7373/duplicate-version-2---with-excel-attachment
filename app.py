@@ -406,7 +406,7 @@ with right:
     if name != "-- Select --":
         candidate_rows = df_raw[df["Name"] == name].copy()
         if not candidate_rows.empty:
-            display_cols = list(candidate_rows.columns)
+            display_cols = [c for c in candidate_rows.columns if c.lower().strip() != "vendor name"]
             badge_keys = {"open/closed", "dl", "ssn", "h1b", "opt"}
             rows_html = ""
             for _, row in candidate_rows[display_cols].iterrows():
