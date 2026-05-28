@@ -206,6 +206,66 @@ st.markdown("""
         border-color: rgba(255,255,255,0.5);
     }
 
+    /* ── Tabs ── */
+    div[data-testid="stTabs"] button[data-testid="stTab"] {
+        color: rgba(255,255,255,0.6) !important;
+        font-weight: 600 !important;
+        font-size: 0.9rem !important;
+        background: transparent !important;
+    }
+    div[data-testid="stTabs"] button[data-testid="stTab"][aria-selected="true"] {
+        color: #ffffff !important;
+        border-bottom: 2px solid #3b82f6 !important;
+    }
+    div[data-testid="stTabs"] {
+        background: transparent !important;
+    }
+
+    /* ── Instructions ── */
+    .instr-card {
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 12px;
+        padding: 1.2rem 1.4rem;
+        margin-bottom: 1rem;
+    }
+    .instr-step {
+        display: flex;
+        gap: 0.9rem;
+        align-items: flex-start;
+        margin-bottom: 0.75rem;
+    }
+    .instr-step:last-child { margin-bottom: 0; }
+    .instr-num {
+        background: #3b82f6;
+        color: #fff;
+        font-weight: 800;
+        font-size: 0.85rem;
+        border-radius: 50%;
+        min-width: 26px;
+        height: 26px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .instr-text {
+        font-size: 0.88rem;
+        color: rgba(255,255,255,0.85);
+        line-height: 1.55;
+        padding-top: 3px;
+    }
+    .instr-text b { color: #ffffff; }
+    .instr-note {
+        background: rgba(251,191,36,0.1);
+        border: 1px solid rgba(251,191,36,0.3);
+        border-radius: 10px;
+        padding: 0.9rem 1.1rem;
+        font-size: 0.85rem;
+        color: rgba(255,255,255,0.85);
+        line-height: 1.55;
+    }
+    .instr-note b { color: #fbbf24; }
+
     /* ── Alert ── */
     div[data-testid="stAlert"] {
         border-radius: 10px;
@@ -345,91 +405,118 @@ if "check_msg" not in st.session_state:
 
 # ── RIGHT: Form ──
 with right:
-    st.markdown('<div class="form-panel"><div class="form-title">Duplicate Destroyer</div></div>', unsafe_allow_html=True)
+    st.markdown('<div class="form-title">Duplicate Destroyer</div>', unsafe_allow_html=True)
+    tab_form, tab_instr = st.tabs(["Check Duplicate", "Instructions"])
 
-    client = st.selectbox("Select Client", client_list)
-    name   = st.selectbox("Select Consultant Full Name *", name_list)
-    role   = st.selectbox("Select Position/Role", role_list)
-    vendor = st.selectbox("Select Vendor Name", vendor_list)
+    with tab_instr:
+        st.markdown("""
+        <div class="instr-card">
+            <div class="instr-step">
+                <div class="instr-num">1</div>
+                <div class="instr-text">
+                    <b>First, check using Name + Client.</b><br>
+                    Always start by selecting the consultant's name and the client name to check for duplicates.
+                </div>
+            </div>
+            <div class="instr-step">
+                <div class="instr-num">2</div>
+                <div class="instr-text">
+                    <b>If the client is not available, check using Name + Vendor.</b><br>
+                    Only use vendor as the second filter when the client name is unknown or not listed.
+                </div>
+            </div>
+        </div>
+        <div class="instr-note">
+            ⚠️ <b>Important:</b> A client may work with multiple vendors.
+            Always ensure the <b>Name + Client</b> combination is not duplicated,
+            regardless of which vendor submitted the profile.
+        </div>
+        """, unsafe_allow_html=True)
 
-    if has_location:
-        location = st.selectbox("Select Location", location_list)
-    else:
-        location = "-- Select --"
-        st.selectbox("Select Location", ["-- Select --"])
+    with tab_form:
+        client = st.selectbox("Select Client", client_list)
+        name   = st.selectbox("Select Consultant Full Name *", name_list)
+        role   = st.selectbox("Select Position/Role", role_list)
+        vendor = st.selectbox("Select Vendor Name", vendor_list)
 
-    b1, b2 = st.columns(2)
-    with b1:
-        check = st.button("Check Duplicate")
-    with b2:
-        st.link_button("📊 Open Master Sheet ↗", "https://docs.google.com/spreadsheets/d/1h-CNfX6IR4UziLkuVVZkwh2LFZtpczypO9yEOSSPUw4/preview")
-
-    if check:
-        if name == "-- Select --":
-            st.session_state.check_result = "warning"
-            st.session_state.check_msg = "⚠️  Please select 'Name' before checking."
+        if has_location:
+            location = st.selectbox("Select Location", location_list)
         else:
-            query = (df["Consultant Full Name"] == name)
-            if client != "-- Select --":
-                query &= (df["Client"] == client)
-            if role != "-- Select --":
-                query &= (df["Position/Role"] == role)
-            if vendor != "-- Select --":
-                query &= (df["Vendor Name"] == vendor)
-            if has_location and location != "-- Select --":
-                query &= (df["Location"] == location)
+            location = "-- Select --"
+            st.selectbox("Select Location", ["-- Select --"])
 
-            match = df[query]
-            if not match.empty:
-                st.session_state.check_result = "error"
-                st.session_state.check_msg = "⚠️  Duplicate found — this combination already exists. Do not submit."
+        b1, b2 = st.columns(2)
+        with b1:
+            check = st.button("Check Duplicate")
+        with b2:
+            st.link_button("📊 Open Master Sheet ↗", "https://docs.google.com/spreadsheets/d/1h-CNfX6IR4UziLkuVVZkwh2LFZtpczypO9yEOSSPUw4/preview")
+
+        if check:
+            if name == "-- Select --":
+                st.session_state.check_result = "warning"
+                st.session_state.check_msg = "⚠️  Please select 'Name' before checking."
             else:
-                if name not in tracker["per_person"]:
-                    tracker["per_person"][name] = {"total": 0, "today": 0}
-                tracker["per_person"][name]["total"] += 1
-                tracker["per_person"][name]["today"] += 1
-                tracker["total"] += 1
-                tracker["today_count"] += 1
-                save_tracker(tracker)
-                st.session_state.check_result = "success"
-                st.session_state.check_msg = "✅  No duplicate found — safe to submit."
-        st.rerun()
+                query = (df["Consultant Full Name"] == name)
+                if client != "-- Select --":
+                    query &= (df["Client"] == client)
+                if role != "-- Select --":
+                    query &= (df["Position/Role"] == role)
+                if vendor != "-- Select --":
+                    query &= (df["Vendor Name"] == vendor)
+                if has_location and location != "-- Select --":
+                    query &= (df["Location"] == location)
 
-    if st.session_state.check_result == "warning":
-        st.warning(st.session_state.check_msg)
-    elif st.session_state.check_result == "error":
-        st.error(st.session_state.check_msg)
-    elif st.session_state.check_result == "success":
-        st.success(st.session_state.check_msg)
+                match = df[query]
+                if not match.empty:
+                    st.session_state.check_result = "error"
+                    st.session_state.check_msg = "⚠️  Duplicate found — this combination already exists. Do not submit."
+                else:
+                    if name not in tracker["per_person"]:
+                        tracker["per_person"][name] = {"total": 0, "today": 0}
+                    tracker["per_person"][name]["total"] += 1
+                    tracker["per_person"][name]["today"] += 1
+                    tracker["total"] += 1
+                    tracker["today_count"] += 1
+                    save_tracker(tracker)
+                    st.session_state.check_result = "success"
+                    st.session_state.check_msg = "✅  No duplicate found — safe to submit."
+            st.rerun()
 
-    # ── Candidate History ──
-    if name != "-- Select --":
-        candidate_rows = df_raw[df["Consultant Full Name"] == name].copy()
-        if not candidate_rows.empty:
-            display_cols = [c for c in [
-                "Date", "Submitted By", "Consultant Full Name", "Actual Owner",
-                "open/closed", "Position/Role", "Location", "DL", "SSN", "H1B", "OPT"
-            ] if c in candidate_rows.columns]
-            badge_keys = {"open/closed", "dl", "ssn", "h1b", "opt"}
-            rows_html = ""
-            for _, row in candidate_rows[display_cols].iterrows():
-                cells = ""
-                for col in display_cols:
-                    val = str(row[col]) if pd.notna(row[col]) else "—"
-                    if val.lower() in ("nan", "none", ""):
-                        val = "—"
-                    if col.lower().strip() in badge_keys:
-                        cells += f'<td><span class="history-badge">{val}</span></td>'
-                    else:
-                        cells += f"<td>{val}</td>"
-                rows_html += f"<tr>{cells}</tr>"
+        if st.session_state.check_result == "warning":
+            st.warning(st.session_state.check_msg)
+        elif st.session_state.check_result == "error":
+            st.error(st.session_state.check_msg)
+        elif st.session_state.check_result == "success":
+            st.success(st.session_state.check_msg)
 
-            headers = "".join(f"<th>{c}</th>" for c in display_cols)
-            st.markdown(
-                f'<div class="history-panel">'
-                f'<div class="history-title">Existing Submissions for this Candidate'
-                f'<span class="history-count">{len(candidate_rows)} record(s)</span></div>'
-                f'<table class="history-table"><thead><tr>{headers}</tr></thead>'
-                f'<tbody>{rows_html}</tbody></table></div>',
-                unsafe_allow_html=True
-            )
+        # ── Candidate History ──
+        if name != "-- Select --":
+            candidate_rows = df_raw[df["Consultant Full Name"] == name].copy()
+            if not candidate_rows.empty:
+                display_cols = [c for c in [
+                    "Date", "Submitted By", "Consultant Full Name", "Actual Owner",
+                    "open/closed", "Position/Role", "Location", "DL", "SSN", "H1B", "OPT"
+                ] if c in candidate_rows.columns]
+                badge_keys = {"open/closed", "dl", "ssn", "h1b", "opt"}
+                rows_html = ""
+                for _, row in candidate_rows[display_cols].iterrows():
+                    cells = ""
+                    for col in display_cols:
+                        val = str(row[col]) if pd.notna(row[col]) else "—"
+                        if val.lower() in ("nan", "none", ""):
+                            val = "—"
+                        if col.lower().strip() in badge_keys:
+                            cells += f'<td><span class="history-badge">{val}</span></td>'
+                        else:
+                            cells += f"<td>{val}</td>"
+                    rows_html += f"<tr>{cells}</tr>"
+
+                headers = "".join(f"<th>{c}</th>" for c in display_cols)
+                st.markdown(
+                    f'<div class="history-panel">'
+                    f'<div class="history-title">Existing Submissions for this Candidate'
+                    f'<span class="history-count">{len(candidate_rows)} record(s)</span></div>'
+                    f'<table class="history-table"><thead><tr>{headers}</tr></thead>'
+                    f'<tbody>{rows_html}</tbody></table></div>',
+                    unsafe_allow_html=True
+                )
