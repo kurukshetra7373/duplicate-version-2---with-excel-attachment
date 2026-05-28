@@ -406,8 +406,10 @@ with right:
     if name != "-- Select --":
         candidate_rows = df_raw[df["Name"] == name].copy()
         if not candidate_rows.empty:
-            display_cols = [c for c in ["Client", "Role", "Vendor Name", "Location", "Submitted By"]
-                            if c in candidate_rows.columns]
+            display_cols = [c for c in [
+                "Date", "Submitted By", "Consultant Full Name", "Actual Owner",
+                "open/closed", "Position/Role", "Location", "DL", "SSN", "H1B", "OPT"
+            ] if c in candidate_rows.columns]
             rows_html = ""
             for _, row in candidate_rows[display_cols].iterrows():
                 cells = ""
@@ -415,7 +417,7 @@ with right:
                     val = str(row[col]) if pd.notna(row[col]) else "—"
                     if val.lower() in ("nan", "none", ""):
                         val = "—"
-                    if col == "Client":
+                    if col in ("open/closed", "DL", "SSN", "H1B", "OPT"):
                         cells += f'<td><span class="history-badge">{val}</span></td>'
                     else:
                         cells += f"<td>{val}</td>"
