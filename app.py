@@ -52,18 +52,9 @@ st.markdown("""
         max-width: 100% !important;
     }
 
-    /* ── FULL PAGE GRADIENT ── */
     .stApp {
         background: linear-gradient(135deg, #1a1f6e 0%, #1e3a8a 45%, #2563eb 100%);
         min-height: 100vh;
-    }
-
-    .page-wrapper {
-        display: flex;
-        gap: 1.5rem;
-        padding: 2rem 2.5rem;
-        min-height: 100vh;
-        align-items: flex-start;
     }
 
     /* ── DASHBOARD (LEFT) ── */
@@ -122,27 +113,12 @@ st.markdown("""
     }
 
     /* ── FORM CARD (RIGHT) ── */
-    .form-panel {
-        flex: 1;
-        background: rgba(15, 25, 80, 0.5);
-        border: 1px solid rgba(255,255,255,0.12);
-        border-radius: 18px;
-        padding: 2.5rem 3rem;
-        backdrop-filter: blur(10px);
-    }
     .form-title {
         font-size: 2rem;
         font-weight: 800;
         color: #ffffff;
         text-align: center;
         margin-bottom: 2rem;
-    }
-    .field-label {
-        font-size: 0.88rem;
-        font-weight: 600;
-        color: #ffffff;
-        margin-bottom: 6px;
-        display: block;
     }
 
     /* ── Selectbox ── */
@@ -221,6 +197,7 @@ st.markdown("""
         border-radius: 14px;
         padding: 1.2rem 1.5rem;
         margin-top: 1.2rem;
+        overflow-x: auto;
     }
     .history-title {
         font-size: 0.95rem;
@@ -239,6 +216,7 @@ st.markdown("""
         width: 100%;
         border-collapse: collapse;
         font-size: 0.82rem;
+        min-width: 800px;
     }
     .history-table th {
         background: rgba(59,130,246,0.3);
@@ -247,12 +225,14 @@ st.markdown("""
         padding: 0.5rem 0.75rem;
         text-align: left;
         border-bottom: 1px solid rgba(255,255,255,0.1);
+        white-space: nowrap;
     }
     .history-table td {
         color: rgba(255,255,255,0.85);
         padding: 0.45rem 0.75rem;
         border-bottom: 1px solid rgba(255,255,255,0.06);
         vertical-align: middle;
+        white-space: nowrap;
     }
     .history-table tr:last-child td { border-bottom: none; }
     .history-table tr:hover td { background: rgba(255,255,255,0.05); }
@@ -265,35 +245,43 @@ st.markdown("""
         font-size: 0.78rem;
         color: #93c5fd;
     }
+    .badge-green {
+        background: rgba(34,197,94,0.2);
+        border-color: rgba(34,197,94,0.4);
+        color: #86efac;
+    }
+    .badge-red {
+        background: rgba(239,68,68,0.2);
+        border-color: rgba(239,68,68,0.4);
+        color: #fca5a5;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 # ── Load data ──
 df_raw = pd.read_excel("aa.xlsx")
 df = df_raw.copy()
-df["Name"]        = df["Name"].astype(str).str.lower().str.strip()
-df["Role"]        = df["Role"].astype(str).str.lower().str.strip()
-df["Vendor Name"] = df["Vendor Name"].astype(str).str.lower().str.strip()
-df["Client"]      = df["Client"].astype(str).str.lower().str.strip()
 
-has_location = "Location" in df.columns
-if has_location:
-    df["Location"] = df["Location"].astype(str).str.lower().str.strip()
-    df_raw["Location"] = df_raw["Location"].astype(str).str.strip()
-    location_list = ["-- Select --"] + sorted(df["Location"].dropna().unique().tolist())
+DISPLAY_COLS = ["Date", "Submitted By", "Consultant Full Name", "Actual Owner",
+                "open/closed", "Position/Role", "Location", "DL", "SSN", "H1B", "OPT"]
 
-name_list   = ["-- Select --"] + sorted(df["Name"].dropna().unique().tolist())
-role_list   = ["-- Select --"] + sorted(df["Role"].dropna().unique().tolist())
-vendor_list = ["-- Select --"] + sorted(df["Vendor Name"].dropna().unique().tolist())
-client_list = ["-- Select --"] + sorted(df["Client"].dropna().unique().tolist())
+# Normalize key lookup columns
+for col in ["Consultant Full Name", "Position/Role", "Location", "Actual Owner"]:
+    if col in df.columns:
+        df[col] = df[col].astype(str).str.lower().str.strip()
 
-# ── Count submissions from "Submitted By" column ──
-submitted_by_col = None
-for col in df.columns:
-    if col.strip().lower().replace(" ", "") == "submittedby":
-        submitted_by_col = col
-        break
+name_col   = "Consultant Full Name"
+role_col   = "Position/Role"
+loc_col    = "Location"
+owner_col  = "Actual Owner"
 
+name_list  = ["-- Select --"] + sorted(df[name_col].dropna().unique().tolist()) if name_col in df.columns else ["-- Select --"]
+role_list  = ["-- Select --"] + sorted(df[role_col].dropna().unique().tolist()) if role_col in df.columns else ["-- Select --"]
+loc_list   = ["-- Select --"] + sorted(df[loc_col].dropna().unique().tolist()) if loc_col in df.columns else ["-- Select --"]
+owner_list = ["-- Select --"] + sorted(df[owner_col].dropna().unique().tolist()) if owner_col in df.columns else ["-- Select --"]
+
+# ── Submission dashboard counts from "Submitted By" ──
+submitted_by_col = "Submitted By" if "Submitted By" in df.columns else None
 EXCLUDED_SUBMITTERS = {"prasanth"}
 
 if submitted_by_col:
@@ -309,13 +297,12 @@ if submitted_by_col:
 else:
     submission_counts = {}
 
-# Today's count per person from tracker
 today_counts = {k: v.get("today", 0) for k, v in tracker.get("per_person", {}).items()}
 
-# ── Layout: dashboard (left) + form (right) ──
+# ── Layout ──
 left, right = st.columns([1, 2.8])
 
-# ── LEFT: Submission Dashboard ──
+# ── LEFT: Dashboard ──
 with left:
     person_cards_html = ""
     for pname, total in sorted(submission_counts.items(), key=lambda x: x[1], reverse=True):
@@ -328,16 +315,15 @@ with left:
             f'<div class="person-row"><span>Today</span><span class="person-val">{today_val}</span></div>'
             f'</div>'
         )
-
     if not person_cards_html:
-        person_cards_html = '<div class="no-submissions">No data in Submitted By column yet.</div>'
+        person_cards_html = '<div class="no-submissions">No data yet.</div>'
 
     st.markdown(
         f'<div class="dashboard-panel"><div class="dashboard-title">Submission Dashboard</div>{person_cards_html}</div>',
         unsafe_allow_html=True
     )
 
-# ── Session state for check result ──
+# ── Session state ──
 if "check_result" not in st.session_state:
     st.session_state.check_result = None
 if "check_msg" not in st.session_state:
@@ -345,18 +331,12 @@ if "check_msg" not in st.session_state:
 
 # ── RIGHT: Form ──
 with right:
-    st.markdown('<div class="form-panel"><div class="form-title">Duplicate Destroyer</div></div>', unsafe_allow_html=True)
+    st.markdown('<div class="form-title">Duplicate Destroyer</div>', unsafe_allow_html=True)
 
-    client = st.selectbox("Select Client", client_list)
-    name   = st.selectbox("Select Name *", name_list)
-    role   = st.selectbox("Select Role", role_list)
-    vendor = st.selectbox("Select Vendor Name", vendor_list)
-
-    if has_location:
-        location = st.selectbox("Select Location", location_list)
-    else:
-        location = "-- Select --"
-        st.selectbox("Select Location", ["-- Select --"])
+    name  = st.selectbox("Select Consultant Full Name *", name_list)
+    role  = st.selectbox("Select Position/Role", role_list)
+    loc   = st.selectbox("Select Location", loc_list)
+    owner = st.selectbox("Select Actual Owner", owner_list)
 
     b1, b2 = st.columns(2)
     with b1:
@@ -367,17 +347,15 @@ with right:
     if check:
         if name == "-- Select --":
             st.session_state.check_result = "warning"
-            st.session_state.check_msg = "⚠️  Please select 'Name' before checking."
+            st.session_state.check_msg = "⚠️  Please select a Consultant Name before checking."
         else:
-            query = (df["Name"] == name)
-            if client != "-- Select --":
-                query &= (df["Client"] == client)
-            if role != "-- Select --":
-                query &= (df["Role"] == role)
-            if vendor != "-- Select --":
-                query &= (df["Vendor Name"] == vendor)
-            if has_location and location != "-- Select --":
-                query &= (df["Location"] == location)
+            query = (df[name_col] == name)
+            if role != "-- Select --" and role_col in df.columns:
+                query &= (df[role_col] == role)
+            if loc != "-- Select --" and loc_col in df.columns:
+                query &= (df[loc_col] == loc)
+            if owner != "-- Select --" and owner_col in df.columns:
+                query &= (df[owner_col] == owner)
 
             match = df[query]
             if not match.empty:
@@ -403,30 +381,32 @@ with right:
         st.success(st.session_state.check_msg)
 
     # ── Candidate History ──
-    if name != "-- Select --":
-        candidate_rows = df_raw[df["Name"] == name].copy()
+    if name != "-- Select --" and name_col in df.columns:
+        candidate_rows = df_raw[df[name_col] == name].copy()
         if not candidate_rows.empty:
-            display_cols = [c for c in [
-                "Date", "Submitted By", "Consultant Full Name", "Actual Owner",
-                "open/closed", "Position/Role", "Location", "DL", "SSN", "H1B", "OPT"
-            ] if c in candidate_rows.columns]
+            show_cols = [c for c in DISPLAY_COLS if c in candidate_rows.columns]
             rows_html = ""
-            for _, row in candidate_rows[display_cols].iterrows():
+            for _, row in candidate_rows[show_cols].iterrows():
                 cells = ""
-                for col in display_cols:
-                    val = str(row[col]) if pd.notna(row[col]) else "—"
-                    if val.lower() in ("nan", "none", ""):
+                for col in show_cols:
+                    val = row[col]
+                    if pd.isna(val) or str(val).lower() in ("nan", "none", ""):
                         val = "—"
-                    if col in ("open/closed", "DL", "SSN", "H1B", "OPT"):
+                    else:
+                        val = str(val)
+                    if col == "open/closed":
+                        badge_class = "badge-green" if val.lower() == "open" else "badge-red" if val.lower() == "closed" else "history-badge"
+                        cells += f'<td><span class="history-badge {badge_class}">{val}</span></td>'
+                    elif col in ("DL", "SSN", "H1B", "OPT"):
                         cells += f'<td><span class="history-badge">{val}</span></td>'
                     else:
                         cells += f"<td>{val}</td>"
                 rows_html += f"<tr>{cells}</tr>"
 
-            headers = "".join(f"<th>{c}</th>" for c in display_cols)
+            headers = "".join(f"<th>{c}</th>" for c in show_cols)
             st.markdown(
                 f'<div class="history-panel">'
-                f'<div class="history-title">Existing Submissions for this Candidate'
+                f'<div class="history-title">Existing Submissions'
                 f'<span class="history-count">{len(candidate_rows)} record(s)</span></div>'
                 f'<table class="history-table"><thead><tr>{headers}</tr></thead>'
                 f'<tbody>{rows_html}</tbody></table></div>',
