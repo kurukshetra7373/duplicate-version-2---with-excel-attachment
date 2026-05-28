@@ -406,10 +406,7 @@ with right:
     if name != "-- Select --":
         candidate_rows = df_raw[df["Name"] == name].copy()
         if not candidate_rows.empty:
-            wanted = ["Date", "Submitted By", "Consultant Full Name", "Actual Owner",
-                      "open/closed", "Position/Role", "Location", "DL", "SSN", "H1B", "OPT"]
-            col_map = {c.lower().strip(): c for c in candidate_rows.columns}
-            display_cols = [col_map[w.lower().strip()] for w in wanted if w.lower().strip() in col_map]
+            display_cols = list(candidate_rows.columns)
             badge_keys = {"open/closed", "dl", "ssn", "h1b", "opt"}
             rows_html = ""
             for _, row in candidate_rows[display_cols].iterrows():
