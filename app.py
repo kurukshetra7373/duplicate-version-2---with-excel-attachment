@@ -406,117 +406,114 @@ if "check_msg" not in st.session_state:
 # ── RIGHT: Form ──
 with right:
     st.markdown('<div class="form-title">Duplicate Destroyer</div>', unsafe_allow_html=True)
-    tab_form, tab_instr = st.tabs(["Check Duplicate", "Instructions"])
 
-    with tab_instr:
-        st.markdown("""
-        <div class="instr-card">
-            <div class="instr-step">
-                <div class="instr-num">1</div>
-                <div class="instr-text">
-                    <b>First, check using Name + Client.</b><br>
-                    Always start by selecting the consultant's name and the client name to check for duplicates.
-                </div>
-            </div>
-            <div class="instr-step">
-                <div class="instr-num">2</div>
-                <div class="instr-text">
-                    <b>If the client is not available, check using Name + Vendor.</b><br>
-                    Only use vendor as the second filter when the client name is unknown or not listed.
-                </div>
+    st.markdown("""
+    <div class="instr-card">
+        <div class="instr-step">
+            <div class="instr-num">1</div>
+            <div class="instr-text">
+                <b>First, check using Name + Client.</b><br>
+                Always start by selecting the consultant's name and the client name to check for duplicates.
             </div>
         </div>
-        <div class="instr-note">
-            ⚠️ <b>Important:</b> A client may work with multiple vendors.
-            Always ensure the <b>Name + Client</b> combination is not duplicated,
-            regardless of which vendor submitted the profile.
+        <div class="instr-step">
+            <div class="instr-num">2</div>
+            <div class="instr-text">
+                <b>If the client is not available, check using Name + Vendor.</b><br>
+                Only use vendor as the second filter when the client name is unknown or not listed.
+            </div>
         </div>
-        """, unsafe_allow_html=True)
+    </div>
+    <div class="instr-note" style="margin-bottom:1.2rem;">
+        ⚠️ <b>Important:</b> A client may work with multiple vendors.
+        Always ensure the <b>Name + Client</b> combination is not duplicated,
+        regardless of which vendor submitted the profile.
+    </div>
+    """, unsafe_allow_html=True)
 
-    with tab_form:
-        client = st.selectbox("Select Client", client_list)
-        name   = st.selectbox("Select Consultant Full Name *", name_list)
-        role   = st.selectbox("Select Position/Role", role_list)
-        vendor = st.selectbox("Select Vendor Name", vendor_list)
+    client = st.selectbox("Select Client", client_list)
+    name   = st.selectbox("Select Consultant Full Name *", name_list)
+    role   = st.selectbox("Select Position/Role", role_list)
+    vendor = st.selectbox("Select Vendor Name", vendor_list)
 
-        if has_location:
-            location = st.selectbox("Select Location", location_list)
+    if has_location:
+        location = st.selectbox("Select Location", location_list)
+    else:
+        location = "-- Select --"
+        st.selectbox("Select Location", ["-- Select --"])
+
+    b1, b2 = st.columns(2)
+    with b1:
+        check = st.button("Check Duplicate")
+    with b2:
+        st.link_button("📊 Open Master Sheet ↗", "https://docs.google.com/spreadsheets/d/1h-CNfX6IR4UziLkuVVZkwh2LFZtpczypO9yEOSSPUw4/preview")
+
+    if check:
+        if name == "-- Select --":
+            st.session_state.check_result = "warning"
+            st.session_state.check_msg = "⚠️  Please select 'Name' before checking."
         else:
-            location = "-- Select --"
-            st.selectbox("Select Location", ["-- Select --"])
+            query = (df["Consultant Full Name"] == name)
+            if client != "-- Select --":
+                query &= (df["Client"] == client)
+            if role != "-- Select --":
+                query &= (df["Position/Role"] == role)
+            if vendor != "-- Select --":
+                query &= (df["Vendor Name"] == vendor)
+            if has_location and location != "-- Select --":
+                query &= (df["Location"] == location)
 
-        b1, b2 = st.columns(2)
-        with b1:
-            check = st.button("Check Duplicate")
-        with b2:
-            st.link_button("📊 Open Master Sheet ↗", "https://docs.google.com/spreadsheets/d/1h-CNfX6IR4UziLkuVVZkwh2LFZtpczypO9yEOSSPUw4/preview")
-
-        if check:
-            if name == "-- Select --":
-                st.session_state.check_result = "warning"
-                st.session_state.check_msg = "⚠️  Please select 'Name' before checking."
+            match = df[query]
+            if not match.empty:
+                st.session_state.check_result = "error"
+                st.session_state.check_msg = "⚠️  Duplicate found — this combination already exists. Do not submit."
             else:
-                query = (df["Consultant Full Name"] == name)
-                if client != "-- Select --":
-                    query &= (df["Client"] == client)
-                if role != "-- Select --":
-                    query &= (df["Position/Role"] == role)
-                if vendor != "-- Select --":
-                    query &= (df["Vendor Name"] == vendor)
-                if has_location and location != "-- Select --":
-                    query &= (df["Location"] == location)
+                if name not in tracker["per_person"]:
+                    tracker["per_person"][name] = {"total": 0, "today": 0}
+                tracker["per_person"][name]["total"] += 1
+                tracker["per_person"][name]["today"] += 1
+                tracker["total"] += 1
+                tracker["today_count"] += 1
+                save_tracker(tracker)
+                st.session_state.check_result = "success"
+                st.session_state.check_msg = "✅  No duplicate found — safe to submit."
+        st.rerun()
 
-                match = df[query]
-                if not match.empty:
-                    st.session_state.check_result = "error"
-                    st.session_state.check_msg = "⚠️  Duplicate found — this combination already exists. Do not submit."
-                else:
-                    if name not in tracker["per_person"]:
-                        tracker["per_person"][name] = {"total": 0, "today": 0}
-                    tracker["per_person"][name]["total"] += 1
-                    tracker["per_person"][name]["today"] += 1
-                    tracker["total"] += 1
-                    tracker["today_count"] += 1
-                    save_tracker(tracker)
-                    st.session_state.check_result = "success"
-                    st.session_state.check_msg = "✅  No duplicate found — safe to submit."
-            st.rerun()
+    if st.session_state.check_result == "warning":
+        st.warning(st.session_state.check_msg)
+    elif st.session_state.check_result == "error":
+        st.error(st.session_state.check_msg)
+    elif st.session_state.check_result == "success":
+        st.success(st.session_state.check_msg)
 
-        if st.session_state.check_result == "warning":
-            st.warning(st.session_state.check_msg)
-        elif st.session_state.check_result == "error":
-            st.error(st.session_state.check_msg)
-        elif st.session_state.check_result == "success":
-            st.success(st.session_state.check_msg)
+    # ── Candidate History ──
+    if name != "-- Select --":
+        candidate_rows = df_raw[df["Consultant Full Name"] == name].copy()
+        if not candidate_rows.empty:
+            display_cols = [c for c in [
+                "Date", "Submitted By", "Consultant Full Name", "Actual Owner",
+                "open/closed", "Position/Role", "Location", "DL", "SSN", "H1B", "OPT"
+            ] if c in candidate_rows.columns]
+            badge_keys = {"open/closed", "dl", "ssn", "h1b", "opt"}
+            rows_html = ""
+            for _, row in candidate_rows[display_cols].iterrows():
+                cells = ""
+                for col in display_cols:
+                    val = str(row[col]) if pd.notna(row[col]) else "—"
+                    if val.lower() in ("nan", "none", ""):
+                        val = "—"
+                    if col.lower().strip() in badge_keys:
+                        cells += f'<td><span class="history-badge">{val}</span></td>'
+                    else:
+                        cells += f"<td>{val}</td>"
+                rows_html += f"<tr>{cells}</tr>"
 
-        # ── Candidate History ──
-        if name != "-- Select --":
-            candidate_rows = df_raw[df["Consultant Full Name"] == name].copy()
-            if not candidate_rows.empty:
-                display_cols = [c for c in [
-                    "Date", "Submitted By", "Consultant Full Name", "Actual Owner",
-                    "open/closed", "Position/Role", "Location", "DL", "SSN", "H1B", "OPT"
-                ] if c in candidate_rows.columns]
-                badge_keys = {"open/closed", "dl", "ssn", "h1b", "opt"}
-                rows_html = ""
-                for _, row in candidate_rows[display_cols].iterrows():
-                    cells = ""
-                    for col in display_cols:
-                        val = str(row[col]) if pd.notna(row[col]) else "—"
-                        if val.lower() in ("nan", "none", ""):
-                            val = "—"
-                        if col.lower().strip() in badge_keys:
-                            cells += f'<td><span class="history-badge">{val}</span></td>'
-                        else:
-                            cells += f"<td>{val}</td>"
-                    rows_html += f"<tr>{cells}</tr>"
-
-                headers = "".join(f"<th>{c}</th>" for c in display_cols)
-                st.markdown(
-                    f'<div class="history-panel">'
-                    f'<div class="history-title">Existing Submissions for this Candidate'
-                    f'<span class="history-count">{len(candidate_rows)} record(s)</span></div>'
-                    f'<table class="history-table"><thead><tr>{headers}</tr></thead>'
-                    f'<tbody>{rows_html}</tbody></table></div>',
-                    unsafe_allow_html=True
-                )
+            headers = "".join(f"<th>{c}</th>" for c in display_cols)
+            st.markdown(
+                f'<div class="history-panel">'
+                f'<div class="history-title">Existing Submissions for this Candidate'
+                f'<span class="history-count">{len(candidate_rows)} record(s)</span></div>'
+                f'<table class="history-table"><thead><tr>{headers}</tr></thead>'
+                f'<tbody>{rows_html}</tbody></table></div>',
+                unsafe_allow_html=True
+            )
