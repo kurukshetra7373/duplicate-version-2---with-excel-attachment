@@ -429,6 +429,12 @@ with right:
                 <b>After selecting the name, scroll down</b> to find the list of all existing submissions done for that consultant.
             </div>
         </div>
+        <div class="instr-step">
+            <div class="instr-num">4</div>
+            <div class="instr-text">
+                <b>Click on "Open Master Sheet"</b> button for details of all submissions.
+            </div>
+        </div>
     </div>
     <div class="instr-note" style="margin-bottom:1.2rem;">
         ⚠️ <b>Important:</b> A client may work with multiple vendors.
