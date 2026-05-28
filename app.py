@@ -213,11 +213,64 @@ st.markdown("""
         font-weight: 500;
         margin-top: 1rem;
     }
+
+    /* ── Candidate History ── */
+    .history-panel {
+        background: rgba(15, 25, 80, 0.5);
+        border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 14px;
+        padding: 1.2rem 1.5rem;
+        margin-top: 1.2rem;
+    }
+    .history-title {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #ffffff;
+        margin-bottom: 0.8rem;
+        letter-spacing: 0.02em;
+    }
+    .history-count {
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: rgba(255,255,255,0.55);
+        margin-left: 0.5rem;
+    }
+    .history-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.82rem;
+    }
+    .history-table th {
+        background: rgba(59,130,246,0.3);
+        color: rgba(255,255,255,0.85);
+        font-weight: 600;
+        padding: 0.5rem 0.75rem;
+        text-align: left;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .history-table td {
+        color: rgba(255,255,255,0.85);
+        padding: 0.45rem 0.75rem;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+        vertical-align: middle;
+    }
+    .history-table tr:last-child td { border-bottom: none; }
+    .history-table tr:hover td { background: rgba(255,255,255,0.05); }
+    .history-badge {
+        display: inline-block;
+        background: rgba(59,130,246,0.25);
+        border: 1px solid rgba(59,130,246,0.4);
+        border-radius: 6px;
+        padding: 2px 8px;
+        font-size: 0.78rem;
+        color: #93c5fd;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 # ── Load data ──
-df = pd.read_excel("aa.xlsx")
+df_raw = pd.read_excel("aa.xlsx")
+df = df_raw.copy()
 df["Name"]        = df["Name"].astype(str).str.lower().str.strip()
 df["Role"]        = df["Role"].astype(str).str.lower().str.strip()
 df["Vendor Name"] = df["Vendor Name"].astype(str).str.lower().str.strip()
@@ -226,6 +279,7 @@ df["Client"]      = df["Client"].astype(str).str.lower().str.strip()
 has_location = "Location" in df.columns
 if has_location:
     df["Location"] = df["Location"].astype(str).str.lower().str.strip()
+    df_raw["Location"] = df_raw["Location"].astype(str).str.strip()
     location_list = ["-- Select --"] + sorted(df["Location"].dropna().unique().tolist())
 
 name_list   = ["-- Select --"] + sorted(df["Name"].dropna().unique().tolist())
@@ -347,3 +401,32 @@ with right:
         st.error(st.session_state.check_msg)
     elif st.session_state.check_result == "success":
         st.success(st.session_state.check_msg)
+
+    # ── Candidate History ──
+    if name != "-- Select --":
+        candidate_rows = df_raw[df["Name"] == name].copy()
+        if not candidate_rows.empty:
+            display_cols = [c for c in ["Client", "Role", "Vendor Name", "Location", "Submitted By"]
+                            if c in candidate_rows.columns]
+            rows_html = ""
+            for _, row in candidate_rows[display_cols].iterrows():
+                cells = ""
+                for col in display_cols:
+                    val = str(row[col]) if pd.notna(row[col]) else "—"
+                    if val.lower() in ("nan", "none", ""):
+                        val = "—"
+                    if col == "Client":
+                        cells += f'<td><span class="history-badge">{val}</span></td>'
+                    else:
+                        cells += f"<td>{val}</td>"
+                rows_html += f"<tr>{cells}</tr>"
+
+            headers = "".join(f"<th>{c}</th>" for c in display_cols)
+            st.markdown(
+                f'<div class="history-panel">'
+                f'<div class="history-title">Existing Submissions for this Candidate'
+                f'<span class="history-count">{len(candidate_rows)} record(s)</span></div>'
+                f'<table class="history-table"><thead><tr>{headers}</tr></thead>'
+                f'<tbody>{rows_html}</tbody></table></div>',
+                unsafe_allow_html=True
+            )
