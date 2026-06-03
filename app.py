@@ -325,6 +325,11 @@ st.markdown("""
         font-size: 0.78rem;
         color: #93c5fd;
     }
+    .badge-red {
+        background: rgba(239,68,68,0.2) !important;
+        border-color: rgba(239,68,68,0.5) !important;
+        color: #fca5a5 !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -520,7 +525,8 @@ with right:
                     if val.lower() in ("nan", "none", ""):
                         val = "—"
                     if col.lower().strip() in badge_keys:
-                        cells += f'<td><span class="history-badge">{val}</span></td>'
+                        badge_class = "badge-red" if val.lower() == "submitted" else "history-badge"
+                        cells += f'<td><span class="history-badge {badge_class}">{val}</span></td>'
                     else:
                         cells += f"<td>{val}</td>"
                 rows_html += f"<tr>{cells}</tr>"
