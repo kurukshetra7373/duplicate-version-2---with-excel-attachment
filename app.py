@@ -330,7 +330,12 @@ st.markdown("""
 
 # ── Load data from Google Sheet ──
 SHEET_CSV = "https://docs.google.com/spreadsheets/d/1yJCQHkMAyBsuEt_yTzpuMUlwTlvwXA8iO-vMGDtKGjQ/export?format=csv"
-df_raw = pd.read_csv(SHEET_CSV)
+
+@st.cache_data(ttl=300)
+def load_sheet():
+    return pd.read_csv(SHEET_CSV)
+
+df_raw = load_sheet()
 df = df_raw.copy()
 df["Consultant Full Name"] = df["Consultant Full Name"].astype(str).str.lower().str.strip()
 df["Position/Role"]        = df["Position/Role"].astype(str).str.lower().str.strip()
