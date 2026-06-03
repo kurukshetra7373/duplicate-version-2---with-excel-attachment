@@ -354,7 +354,7 @@ for col in df.columns:
         submitted_by_col = col
         break
 
-EXCLUDED_SUBMITTERS = {"prasanth"}
+EXCLUDED_SUBMITTERS = {"prasanth", "prashanth"}
 
 if submitted_by_col:
     df[submitted_by_col] = df[submitted_by_col].astype(str).str.strip()
